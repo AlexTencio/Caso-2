@@ -1,0 +1,94 @@
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from scipy.stats import zscore
+
+# Cargar el archivo CSV desde GitHub
+url = 'https://raw.githubusercontent.com/AlexTencio/Caso-2/main/Ciudades_Final.csv'  # URL pública del CSV en GitHub
+df = pd.read_csv(url)
+
+# Continuar con el resto del código
+df.head()
+
+columns_to_keep = ['Cntry_name', 'eFUA_name', 'POP_SUM', 'GDP_SUM', 'BS_SUM',
+                   'CO2_SUM', 'BV_SUM', 'BV_BS', 'POV_MEAN', 'CO2_POP']
+df_cleaned = df[columns_to_keep].copy()
+
+df_cleaned.columns = ['Country', 'City', 'Population', 'GDP', 'Built_Surface', 'Carbon_Emissions',
+                      'Built_Volume', 'Volume_Surface_Ratio', 'Poverty', 'Carbon_Emissions_per_capita']
+df_cleaned = df_cleaned.replace(['#DIV/0!', '<Null>'], np.nan)
+df_cleaned['Population'] = pd.to_numeric(df_cleaned['Population'], errors='coerce')
+df_cleaned['GDP'] = pd.to_numeric(df_cleaned['GDP'], errors='coerce')
+df_cleaned['Built_Surface'] = pd.to_numeric(df_cleaned['Built_Surface'], errors='coerce')
+df_cleaned['Carbon_Emissions'] = pd.to_numeric(df_cleaned['Carbon_Emissions'], errors='coerce')
+df_cleaned['Built_Volume'] = pd.to_numeric(df_cleaned['Built_Volume'], errors='coerce')
+df_cleaned['Volume_Surface_Ratio'] = pd.to_numeric(df_cleaned['Volume_Surface_Ratio'], errors='coerce')
+df_cleaned['Poverty'] = pd.to_numeric(df_cleaned['Poverty'], errors='coerce')
+df_cleaned['Carbon_Emissions_per_capita'] = pd.to_numeric(df_cleaned['Carbon_Emissions_per_capita'], errors='coerce')
+
+df_cleaned.dropna(how='all', subset=['Population', 'GDP', 'Built_Surface', 'Carbon_Emissions',
+                                     'Built_Volume', 'Volume_Surface_Ratio', 'Poverty',
+                                     'Carbon_Emissions_per_capita'], inplace=True)
+df_cleaned.fillna(df_cleaned.mean(numeric_only=True), inplace=True)
+
+df_grouped = df_cleaned.groupby(['Country', 'City'], as_index=False).agg({
+    'Population': 'sum',
+    'GDP': 'sum',
+    'Built_Surface': 'sum',
+    'Carbon_Emissions': 'sum',
+    'Built_Volume': 'sum',
+    'Volume_Surface_Ratio': 'mean',  # La razón puede tener más sentido con la media
+    'Poverty': 'mean',  # La pobreza suele expresarse mejor con la media
+    'Carbon_Emissions_per_capita': 'mean'
+})
+
+print("Estadísticas descriptivas:")
+print(df_grouped.describe())
+
+numeric_columns = df_grouped.select_dtypes(include=[float, int])  # Seleccionar solo las columnas numéricas
+correlation_matrix = numeric_columns.corr()
+
+print("Matriz de correlación:")
+print(correlation_matrix)
+
+z_scores = df_grouped[['Population', 'GDP', 'Built_Surface', 'Carbon_Emissions',
+                       'Built_Volume', 'Volume_Surface_Ratio', 'Poverty',
+                       'Carbon_Emissions_per_capita']].apply(zscore)
+
+fig = go.Figure(data=go.Heatmap(
+                   z=correlation_matrix.values,
+                   x=correlation_matrix.columns,
+                   y=correlation_matrix.columns,
+                   colorscale='cividis'))
+fig.update_layout(title='Matriz de Correlación', xaxis_nticks=36)
+fig.show()
+
+fig = px.scatter(
+    df_grouped,  # Usamos el DataFrame limpio
+    x="Carbon_Emissions_per_capita",  # Emisiones de carbono per cápita
+    y="Poverty",  # Pobreza
+    size="Population",  # Población
+    color="Country",  # País
+    color_discrete_map={
+        "Belize": '#70a7d8',
+        "CostaRica": '#007934',
+        "ElSalvador": '#F6D900',
+        "Guatemala": '#E8604B',
+        "Honduras": '#F99030',
+        "Nicaragua": '#BEE862',
+        "Panama": '#5ADBD8',
+        "Guyana": '#1A9995',
+        "Paraguay": '#E58FE1',
+        "Peru": '#D91023',
+        "Suriname": '#80CE91',
+        "Uruguay": '#0038A8',
+        "Venezuela": '#7D7DEF'
+    },  # Asignar colores personalizados por país
+    hover_name="City",  # Nombre de la ciudad en el hover
+    log_x=True,  # Escala logarítmica en el eje X
+    size_max=60  # Tamaño máximo del punto
+)
+
+# Mostrar la figura
+fig.show()
