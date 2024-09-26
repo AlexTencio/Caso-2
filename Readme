@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from scipy.stats import zscore
 
 # Cargar el archivo CSV desde GitHub
-url = 'https://raw.githubusercontent.com/AlexTencio/Caso-2/main/Ciudades_Final.csv'  # URL pública del CSV en GitHub
+url = 'https://raw.githubusercontent.com/AlexTencio/Caso-2/refs/heads/main/Ciudades_Final.csv?token=GHSAT0AAAAAACYBVKYVBUVOHX5NQHTHR5TCZXUZWWQ'  # URL pública del CSV en GitHub
 df = pd.read_csv(url)
 
 # Continuar con el resto del código
